@@ -1,6 +1,6 @@
 #![feature(pointer_byte_offsets)]
 
-use std::{ptr, slice};
+use std::{panic, ptr, slice};
 
 use embree4_rs::{geometry::UserGeometry, Device, Scene};
 
@@ -30,9 +30,17 @@ struct Sphere {
     radius: f32,
 }
 
+impl Sphere {
+    pub fn oops(&self) {
+        panic!("oops");
+    }
+}
+
 unsafe extern "C" fn bounds_fn(args: *const embree4_sys::RTCBoundsFunctionArguments) {
     let args = *args;
     let sphere = ptr::read(args.geometryUserPtr as *const Sphere);
+
+    sphere.oops();
 
     let min = (
         sphere.center.0 - sphere.radius,
