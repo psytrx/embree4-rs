@@ -89,7 +89,7 @@ checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
 
 [[package]]
 name = "embree4-rs"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "embree4-sys",
@@ -97,9 +97,9 @@ dependencies = [
 
 [[package]]
 name = "embree4-sys"
-version = "0.0.4"
+version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0665d147823e19387c8b55767ac4def9175f66881e53c9a9b808b72d8dd48c62"
+checksum = "9d78f8f222c22197febda59a271aa7423328ec8d7f91af7a699340e8cc0f0d06"
 dependencies = [
  "bindgen",
 ]
