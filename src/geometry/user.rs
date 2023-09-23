@@ -1,10 +1,12 @@
+use std::ptr;
+
 use crate::{device_error_or, Device};
 
 use anyhow::Result;
 
 use super::Geometry;
 
-pub struct UserGeometry<'a, T> {
+pub struct UserGeometry<'a, T: UserGeometryImpl> {
     handle: embree4_sys::RTCGeometry,
     data: &'a T,
 }
@@ -16,7 +18,7 @@ type ExternOccludedFn =
     unsafe extern "C" fn(_args: *const embree4_sys::RTCOccludedFunctionNArguments);
 
 #[allow(clippy::missing_safety_doc)]
-impl<'a, T> UserGeometry<'a, T> {
+impl<'a, T: UserGeometryImpl> UserGeometry<'a, T> {
     /// Creates a new `UserGeometry` object.
     ///
     /// # Arguments
@@ -33,7 +35,6 @@ impl<'a, T> UserGeometry<'a, T> {
     pub fn try_new(
         device: &Device,
         data: &'a T,
-        bounds_fn: ExternBoundsFn,
         intersect_fn: ExternIntersectFn,
         occluded_fn: ExternOccludedFn,
     ) -> Result<Self> {
@@ -55,7 +56,11 @@ impl<'a, T> UserGeometry<'a, T> {
         device_error_or(device, (), "Could not set user geometry data")?;
 
         unsafe {
-            embree4_sys::rtcSetGeometryBoundsFunction(handle, Some(bounds_fn), data_ptr);
+            embree4_sys::rtcSetGeometryBoundsFunction(
+                handle,
+                Some(internal_bounds_fn::<T>),
+                data_ptr,
+            );
         };
         device_error_or(device, (), "Could not set user geometry bounds function")?;
 
@@ -78,16 +83,28 @@ impl<'a, T> UserGeometry<'a, T> {
     }
 }
 
-impl<'a, T> Geometry for UserGeometry<'a, T> {
+impl<'a, T: UserGeometryImpl> Geometry for UserGeometry<'a, T> {
     fn geometry(&self) -> embree4_sys::RTCGeometry {
         self.handle
     }
 }
 
-impl<'a, T> Drop for UserGeometry<'a, T> {
+impl<'a, T: UserGeometryImpl> Drop for UserGeometry<'a, T> {
     fn drop(&mut self) {
         unsafe {
             embree4_sys::rtcReleaseGeometry(self.handle);
         }
     }
+}
+
+unsafe extern "C" fn internal_bounds_fn<T: UserGeometryImpl>(
+    args: *const embree4_sys::RTCBoundsFunctionArguments,
+) {
+    let args = *args;
+    let geom = ptr::read(args.geometryUserPtr as *const T);
+    *args.bounds_o = geom.bounds();
+}
+
+pub trait UserGeometryImpl {
+    fn bounds(&self) -> embree4_sys::RTCBounds;
 }

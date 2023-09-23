@@ -1,10 +1,14 @@
 #![feature(pointer_byte_offsets)]
 
-use std::{panic, ptr, slice};
+use std::{panic, slice};
 
-use embree4_rs::{geometry::UserGeometry, Device, Scene};
+use embree4_rs::{
+    geometry::{UserGeometry, UserGeometryImpl},
+    Device, Scene,
+};
 
 use anyhow::Result;
+use glam::{vec3, Vec3};
 
 fn main() -> Result<()> {
     let config = Some("verbose=1");
@@ -13,10 +17,10 @@ fn main() -> Result<()> {
 
     // For user geometry, the data must outlive the scene.
     let sphere = Sphere {
-        center: (0.0, 0.0, 4.0),
+        center: vec3(0.0, 0.0, 5.0),
         radius: 1.0,
     };
-    let geom = UserGeometry::try_new(&device, &sphere, bounds_fn, intersect_fn, occluded_fn)?;
+    let geom = UserGeometry::try_new(&device, &sphere, intersect_fn, occluded_fn)?;
 
     scene.attach_geometry(&geom)?;
 
@@ -26,40 +30,23 @@ fn main() -> Result<()> {
 }
 
 struct Sphere {
-    center: (f32, f32, f32),
+    center: Vec3,
     radius: f32,
 }
 
-impl Sphere {
-    pub fn oops(&self) {
-        panic!("oops");
+impl UserGeometryImpl for Sphere {
+    fn bounds(&self) -> embree4_sys::RTCBounds {
+        embree4_sys::RTCBounds {
+            lower_x: self.center.x - self.radius,
+            lower_y: self.center.y - self.radius,
+            lower_z: self.center.z - self.radius,
+            align0: Default::default(),
+            upper_x: self.center.x + self.radius,
+            upper_y: self.center.y + self.radius,
+            upper_z: self.center.z + self.radius,
+            align1: Default::default(),
+        }
     }
-}
-
-unsafe extern "C" fn bounds_fn(args: *const embree4_sys::RTCBoundsFunctionArguments) {
-    let args = *args;
-    let sphere = ptr::read(args.geometryUserPtr as *const Sphere);
-
-    sphere.oops();
-
-    let min = (
-        sphere.center.0 - sphere.radius,
-        sphere.center.1 - sphere.radius,
-        sphere.center.2 - sphere.radius,
-    );
-    let max = (
-        sphere.center.0 + sphere.radius,
-        sphere.center.1 + sphere.radius,
-        sphere.center.2 + sphere.radius,
-    );
-
-    let mut bounds = *args.bounds_o;
-    bounds.lower_x = min.0;
-    bounds.lower_y = min.1;
-    bounds.lower_z = min.2;
-    bounds.upper_x = max.0;
-    bounds.upper_y = max.1;
-    bounds.upper_z = max.2;
 }
 
 unsafe extern "C" fn intersect_fn(args: *const embree4_sys::RTCIntersectFunctionNArguments) {
@@ -130,14 +117,14 @@ unsafe extern "C" fn occluded_fn(_args: *const embree4_sys::RTCOccludedFunctionN
 }
 
 fn ray_sphere_intersect(
-    center: (f32, f32, f32),
+    center: Vec3,
     r: f32,
     origin: (f32, f32, f32),
     direction: (f32, f32, f32),
 ) -> Option<f32> {
-    let ox_cx = origin.0 - center.0;
-    let oy_cy = origin.1 - center.1;
-    let oz_cz = origin.2 - center.2;
+    let ox_cx = origin.0 - center.x;
+    let oy_cy = origin.1 - center.y;
+    let oz_cz = origin.2 - center.z;
 
     let a = direction.0 * direction.0 + direction.1 * direction.1 + direction.2 * direction.2;
     let b = 2.0 * (ox_cx * direction.0 + oy_cy * direction.1 + oz_cz * direction.2);
