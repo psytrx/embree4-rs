@@ -1,6 +1,6 @@
 #![feature(pointer_byte_offsets)]
 
-use std::f32::{consts::PI, INFINITY};
+use std::f32::consts::PI;
 
 use embree4_rs::{
     geometry::{UserGeometry, UserGeometryImpl},
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let device = Device::try_new(config)?;
     let scene = Scene::try_new(&device, Default::default())?;
 
-    // For user geometry, the data must outlive the scene.
+    // For user geometry, the underlying data must outlive the scene.
     let sphere = Sphere {
         center: vec3(0.0, 0.0, 5.0),
         radius: 1.0,
@@ -24,37 +24,39 @@ fn main() -> Result<()> {
     let geom = UserGeometry::try_new(&device, &sphere)?;
 
     scene.attach_geometry(&geom)?;
-
     let scene = scene.commit()?;
 
-    let origin = Vec3::ZERO;
-    let width = 32;
-    let height = 18;
+    // Trace rays through each pixel.
+    // We use an orthographic camera with the image plane at z=5.
+    // We count the hits to estimate pi.
+
+    let width = 4096;
+    let height = 4096;
+
+    let cam_dist = sphere.center.z;
 
     let rays = width * height;
     let mut hits = 0;
 
+    let t0 = std::time::Instant::now();
     for x in 0..width {
         for y in 0..height {
             let u = (x as f32 + 0.5) / width as f32;
             let v = (y as f32 + 0.5) / height as f32;
 
             let target = vec3(u * 2.0 - 1.0, v * 2.0 - 1.0, 5.0);
-            let direction = target - origin;
+            let direction = cam_dist * Vec3::Z;
+            let origin = target - direction;
 
+            // construct a ray
             let ray = RTCRay {
                 org_x: origin.x,
                 org_y: origin.y,
                 org_z: origin.z,
-                tnear: 0.0,
                 dir_x: direction.x,
                 dir_y: direction.y,
                 dir_z: direction.z,
-                time: 0.0,
-                tfar: INFINITY,
-                mask: (-1_i32) as u32,
-                id: 0,
-                flags: 0,
+                ..Default::default()
             };
 
             let hit = scene.intersect_1(ray)?;
@@ -64,13 +66,20 @@ fn main() -> Result<()> {
             }
         }
     }
+    let elapsed = t0.elapsed();
 
     let hit_fraction = hits as f32 / rays as f32;
+    println!("hit_fraction: {}", hit_fraction);
+
     let approx_pi = hit_fraction * 4.0;
-    println!("Hit fraction: {}", hit_fraction);
-    println!("Approximated pi: {}", approx_pi);
+    println!("   approx_pi: {}", approx_pi);
+
     let err = (approx_pi - PI).abs();
-    println!("Error: {}", err);
+    let err_percent = err / PI * 100.0;
+    println!("         err: {} ({:.5}%)", err, err_percent);
+
+    let rays_per_sec = (rays as f32 / elapsed.as_secs_f32()) as usize;
+    println!("rays_per_sec: {}", rays_per_sec);
 
     Ok(())
 }

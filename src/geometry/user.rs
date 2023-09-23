@@ -7,6 +7,21 @@ use embree4_sys::{RTCRayHit, RTC_INVALID_GEOMETRY_ID};
 
 use super::Geometry;
 
+/// The user geometry implementation.
+/// If you want to use custom geometry, you need to implement this trait.
+/// See the [examples/](https://github.com/psytrx/embree4-rs/tree/main/examples) for an example of
+/// how to implement one.
+pub trait UserGeometryImpl {
+    fn bounds(&self) -> embree4_sys::RTCBounds;
+    fn intersect(
+        &self,
+        geom_id: u32,
+        prim_id: u32,
+        ctx: &embree4_sys::RTCRayQueryContext,
+        ray_hit: &mut embree4_sys::RTCRayHit,
+    );
+}
+
 pub struct UserGeometry<T: UserGeometryImpl> {
     handle: embree4_sys::RTCGeometry,
     data: PhantomData<T>,
@@ -183,7 +198,7 @@ unsafe extern "C" fn internal_intersect_fn<T: UserGeometryImpl>(
             },
         };
 
-        geom.intersect(*geom_id, *prim_id, context, &mut ray_hit);
+        geom.intersect(args.geomID, args.primID, context, &mut ray_hit);
 
         if ray_hit.hit.geomID != RTC_INVALID_GEOMETRY_ID {
             *tfar = ray_hit.ray.tfar;
@@ -205,15 +220,4 @@ unsafe extern "C" fn internal_intersect_fn<T: UserGeometryImpl>(
 #[inline(always)]
 fn offset(offset: usize, n: usize, i: usize) -> usize {
     offset * n + i
-}
-
-pub trait UserGeometryImpl {
-    fn bounds(&self) -> embree4_sys::RTCBounds;
-    fn intersect(
-        &self,
-        geom_id: u32,
-        prim_id: u32,
-        ctx: &embree4_sys::RTCRayQueryContext,
-        ray_hit: &mut embree4_sys::RTCRayHit,
-    );
 }
