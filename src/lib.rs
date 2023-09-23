@@ -1,13 +1,13 @@
 mod device;
+pub mod geometry;
 mod scene;
 
 use anyhow::{bail, Result};
 
 pub use device::*;
-use embree4_sys::RTCDevice;
 pub use scene::*;
 
-fn device_error_raw(device: RTCDevice) -> Option<embree4_sys::RTCError> {
+fn device_error_raw(device: embree4_sys::RTCDevice) -> Option<embree4_sys::RTCError> {
     let err = unsafe { embree4_sys::rtcGetDeviceError(device) };
     if err != embree4_sys::RTCError::NONE {
         Some(err)
