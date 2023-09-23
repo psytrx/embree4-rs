@@ -5,7 +5,7 @@ pub struct Device {
 }
 
 impl Device {
-    /// Tries to create a new `Device` using the provided configuration string.
+    /// Constructs a new `Device` using the provided configuration string.
     ///
     /// # Arguments
     ///
