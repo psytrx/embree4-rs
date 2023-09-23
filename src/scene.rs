@@ -111,7 +111,7 @@ impl<'a> Scene<'a> {
         }
         device_error_or(
             self.device,
-            CommittedScene { scene: self },
+            CommittedScene { _scene: self },
             "Could not commit scene",
         )
     }
@@ -132,5 +132,5 @@ pub struct SceneOptions {
 }
 
 pub struct CommittedScene<'a> {
-    scene: &'a Scene<'a>,
+    _scene: &'a Scene<'a>,
 }
