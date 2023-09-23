@@ -1,6 +1,6 @@
 [package]
 name = "embree4-rs"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 description = "High-level wrapper for Intel's Embree 4 high-performance ray tracing library."
 keywords = ["intel", "embree", "ray", "tracing", "bvh"]
