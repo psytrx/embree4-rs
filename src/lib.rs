@@ -1,3 +1,21 @@
+//! [![Crates.io](https://img.shields.io/crates/v/embree4-rs.svg)](https://crates.io/crates/embree4-rs)
+//!
+//! High-level wrapper for [Intel's Embree](https://www.embree.org/) 4 high-performance ray tracing
+//! library.
+//!
+//! FFI Bindings from [embree4-sys](https://crates.io/crates/embree4-sys).
+//!
+//! A valid Embree installation is required. See
+//! [Installation of Embree](https://github.com/embree/embree#installation-of-embree)
+//! from the Embree docs.
+//!
+//! # Documentation
+//!
+//! Docs at [docs.rs](https://docs.rs/embree4-rs).
+//!
+//! See the [examples/](https://github.com/psytrx/embree4-rs/tree/main/examples) for a quick start
+//! on how to use this crate.
+
 mod device;
 pub mod geometry;
 mod scene;
