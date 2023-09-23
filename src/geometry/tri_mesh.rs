@@ -11,7 +11,26 @@ pub struct TriangleMeshGeometry {
 }
 
 impl TriangleMeshGeometry {
-    #[allow(clippy::missing_safety_doc)]
+    /// Constructs a new `TriangleMeshGeometry` instance from the given vertices and indices.
+    ///
+    /// # Example
+    /// ```
+    /// use embree4_rs::{*, geometry::*};
+    /// use embree4_sys::*;
+    ///
+    /// let vertices = [
+    ///   (-1.0, -1.0, 0.0),
+    ///   (1.0, -1.0, 0.0),
+    ///   (1.0, 1.0, 0.0),
+    ///   (-1.0, 1.0, 0.0),
+    /// ];
+    /// let indices = [(0, 1, 2), (2, 3, 0)];
+    ///
+    /// let device = Device::try_new(None).unwrap();
+    /// let geometry = TriangleMeshGeometry::try_new(&device, &vertices, &indices).unwrap();
+    /// let scene = Scene::try_new(&device, SceneOptions::default()).unwrap();
+    /// scene.attach_geometry(&geometry);
+    /// ```
     pub fn try_new(
         device: &Device,
         vertices: &[(f32, f32, f32)],

@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::{device_error_or, device_error_raw, Device};
+use crate::{device_error_or, device_error_raw, geometry::Geometry, Device};
 
 pub struct Scene<'a> {
     device: &'a Device,
@@ -76,6 +76,18 @@ impl<'a> Scene<'a> {
             embree4_sys::rtcSetSceneFlags(self.handle, flags);
         }
         device_error_or(self.device, (), "Could not set scene flags")
+    }
+
+    /// Attaches the given geometry to the scene.
+    ///
+    /// # Arguments
+    /// * `geometry` - A reference to the `Geometry` instance to attach.
+    ///
+    /// # Returns
+    /// * A `Result` containing the geometry ID if successful, or an error if an error occurred.
+    pub fn attach_geometry(&self, geometry: &impl Geometry) -> Result<u32> {
+        let geom_id = unsafe { embree4_sys::rtcAttachGeometry(self.handle, geometry.geometry()) };
+        device_error_or(self.device, geom_id, "Could not attach geometry")
     }
 }
 

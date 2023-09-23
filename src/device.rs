@@ -22,13 +22,8 @@ impl Device {
     /// ```
     /// use embree4_rs::Device;
     ///
-    /// match Device::try_new(Some("verbose=3,start_threads=1")) {
-    ///     Ok(device) => {
-    ///         println!("Device created successfully!");
-    ///         // Use the device...
-    ///     },
-    ///     Err(error) => println!("Could not create device: {}", error),
-    /// }
+    /// let device = Device::try_new(Some("verbose=1")).unwrap();
+    /// // Use the device...
     /// ```
     pub fn try_new(config: Option<&str>) -> Result<Self> {
         let handle = match config {
