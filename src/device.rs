@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 
 pub struct Device {
-    handle: embree4_sys::RTCDevice,
+    pub(crate) handle: embree4_sys::RTCDevice,
 }
 
 impl Device {
@@ -31,6 +31,7 @@ impl Device {
     /// ```
     pub fn try_new(config: &str) -> Result<Self> {
         let handle = unsafe { embree4_sys::rtcNewDevice(config.as_bytes() as *const _ as _) };
+
         if handle.is_null() {
             let error = unsafe { embree4_sys::rtcGetDeviceError(handle) };
             bail!("Failed to create device: {:?}", error);
