@@ -1,7 +1,6 @@
 use anyhow::{bail, Result};
-use bitflags::bitflags;
 
-use crate::Device;
+use crate::{device_error_or, device_error_raw, Device};
 
 pub struct Scene<'a> {
     device: &'a Device,
@@ -12,31 +11,30 @@ impl<'a> Scene<'a> {
     /// Constructs a new `Scene` instance from the given options.
     ///
     /// # Arguments
-    ///
     /// * `device` - A reference to the `Device` instance.
     /// * `options` - The options for creating the scene.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the `Scene` instance if successful, or an error if an error occurred.
     ///
     /// # Example
-    ///
     /// ```
     /// use embree4_rs::*;
+    /// use embree4_sys::*;
     ///
-    /// let device = Device::try_new("").unwrap();
+    /// let device = Device::try_new(None).unwrap();
     /// let options = SceneOptions {
-    ///     build_quality: SceneBuildQuality::High,
-    ///     flags: SceneFlags::Compact | SceneFlags::Robust,
+    ///     build_quality: RTCBuildQuality::HIGH,
+    ///     flags: RTCSceneFlags::COMPACT | RTCSceneFlags::ROBUST,
     /// };
     /// let scene = Scene::try_new(&device, options).unwrap();
     /// ```
     pub fn try_new(device: &'a Device, options: SceneOptions) -> Result<Self> {
         let handle = unsafe { embree4_sys::rtcNewScene(device.handle) };
+
         if handle.is_null() {
-            let error = unsafe { embree4_sys::rtcGetDeviceError(device.handle) };
-            bail!("Failed to create scene: {:?}", error);
+            let error = device_error_raw(device.handle);
+            bail!("Could not create scene: {:?}", error);
         }
 
         let scene = Scene { device, handle };
@@ -55,43 +53,29 @@ impl<'a> Scene<'a> {
     /// Sets the build quality of the scene.
     ///
     /// # Arguments
-    ///
     /// * `quality` - The build quality to set.
     ///
     /// # Returns
-    ///
     /// A `Result` indicating success or failure.
-    pub fn set_build_quality(&self, quality: SceneBuildQuality) -> Result<()> {
-        let quality = quality.to_sys_enum();
+    pub fn set_build_quality(&self, quality: embree4_sys::RTCBuildQuality) -> Result<()> {
         unsafe {
             embree4_sys::rtcSetSceneBuildQuality(self.handle, quality);
         }
-        let error = unsafe { embree4_sys::rtcGetDeviceError(self.device.handle) };
-        if error != embree4_sys::RTCError::NONE {
-            bail!("Failed to set scene build quality: {:?}", error);
-        }
-        Ok(())
+        device_error_or(self.device, (), "Could not set scene build quality")
     }
 
     /// Sets the flags of the scene.
     ///
     /// # Arguments
-    ///
     /// * `flags` - The flags to set.
     ///
     /// # Returns
-    ///
     /// A `Result` indicating success or failure.
-    pub fn set_flags(&self, flags: SceneFlags) -> Result<()> {
-        let flags = flags.to_sys_flags();
+    pub fn set_flags(&self, flags: embree4_sys::RTCSceneFlags) -> Result<()> {
         unsafe {
             embree4_sys::rtcSetSceneFlags(self.handle, flags);
         }
-        let error = unsafe { embree4_sys::rtcGetDeviceError(self.device.handle) };
-        if error != embree4_sys::RTCError::NONE {
-            panic!("Failed to set scene flags: {:?}", error);
-        }
-        Ok(())
+        device_error_or(self.device, (), "Could not set scene flags")
     }
 }
 
@@ -105,44 +89,6 @@ impl<'a> Drop for Scene<'a> {
 
 #[derive(Default)]
 pub struct SceneOptions {
-    pub build_quality: SceneBuildQuality,
-    pub flags: SceneFlags,
-}
-
-#[derive(PartialEq, Default)]
-pub enum SceneBuildQuality {
-    Low,
-    #[default]
-    Medium,
-    High,
-}
-
-impl SceneBuildQuality {
-    /// Converts the `SceneBuildQuality` enum to the corresponding embree4_sys::RTCBuildQuality enum.
-    pub fn to_sys_enum(&self) -> embree4_sys::RTCBuildQuality {
-        match self {
-            SceneBuildQuality::Low => embree4_sys::RTCBuildQuality::LOW,
-            SceneBuildQuality::Medium => embree4_sys::RTCBuildQuality::MEDIUM,
-            SceneBuildQuality::High => embree4_sys::RTCBuildQuality::HIGH,
-        }
-    }
-}
-
-bitflags! {
-    #[derive(PartialEq, Default)]
-    pub struct SceneFlags: u32 {
-        const None = 0;
-        const Dynamic = (1 << 0);
-        const Compact = (1 << 1);
-        const Robust = (1 << 2);
-        const FilterFunction = (1 << 3);
-    }
-}
-
-impl SceneFlags {
-    /// Converts the `SceneFlags` enum to the corresponding embree4_sys::RTCSceneFlags enum.
-    pub fn to_sys_flags(&self) -> embree4_sys::RTCSceneFlags {
-        let flags = self as *const _ as u32;
-        embree4_sys::RTCSceneFlags(flags)
-    }
+    pub build_quality: embree4_sys::RTCBuildQuality,
+    pub flags: embree4_sys::RTCSceneFlags,
 }
