@@ -13,5 +13,4 @@ exclude = [".gitignore"]
 
 [dependencies]
 anyhow = "1.0.75"
-bitflags = "2.4.0"
-embree4-sys = "0.0.2"
+embree4-sys = "0.0.4"
