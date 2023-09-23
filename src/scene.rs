@@ -89,6 +89,32 @@ impl<'a> Scene<'a> {
         let geom_id = unsafe { embree4_sys::rtcAttachGeometry(self.handle, geometry.geometry()) };
         device_error_or(self.device, geom_id, "Could not attach geometry")
     }
+
+    /// Commits the scene.
+    ///
+    /// # Returns
+    /// A `Result` containing the `CommittedScene` instance if successful, or an error if an error occurred.
+    ///
+    /// # Example
+    /// ```
+    /// use embree4_rs::*;
+    /// use embree4_sys::*;
+    ///
+    /// let device = Device::try_new(None).unwrap();
+    /// let options = Default::default();
+    /// let scene = Scene::try_new(&device, options).unwrap();
+    /// let scene = scene.commit().unwrap();
+    /// ```
+    pub fn commit(&self) -> Result<CommittedScene> {
+        unsafe {
+            embree4_sys::rtcCommitScene(self.handle);
+        }
+        device_error_or(
+            self.device,
+            CommittedScene { scene: self },
+            "Could not commit scene",
+        )
+    }
 }
 
 impl<'a> Drop for Scene<'a> {
@@ -103,4 +129,8 @@ impl<'a> Drop for Scene<'a> {
 pub struct SceneOptions {
     pub build_quality: embree4_sys::RTCBuildQuality,
     pub flags: embree4_sys::RTCSceneFlags,
+}
+
+pub struct CommittedScene<'a> {
+    scene: &'a Scene<'a>,
 }
