@@ -12,7 +12,20 @@ use super::Geometry;
 /// See the [examples/](https://github.com/psytrx/embree4-rs/tree/main/examples) for an example of
 /// how to implement one.
 pub trait UserGeometryImpl {
+    /// Returns the bounds of the geometry
     fn bounds(&self) -> embree4_sys::RTCBounds;
+
+    /// Computes an intersection between the given ray and the geometry.
+    /// If an intersection is found,
+    ///
+    /// * the ray's `tfar` field
+    /// * the hit's normals (`Ng_x`, `Ng_y`, `Ng_z`)
+    /// * the hit's `u` and `v` coordinates
+    /// * the hit's `primID`, `geomID` and `instID`
+    ///
+    /// must all be updated.
+    ///
+    /// Setting `ray_hit.hit.geomID` to the supplied `geom_id` signals an intersection.
     fn intersect(
         &self,
         geom_id: u32,

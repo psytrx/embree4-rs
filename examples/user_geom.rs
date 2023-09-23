@@ -119,6 +119,8 @@ impl UserGeometryImpl for Sphere {
         let c = oc.dot(oc) - self.radius * self.radius;
 
         let discriminant = b * b - 4.0 * a * c;
+
+        // If we have no intersection, we can exit early
         if discriminant < 0.0 {
             return;
         }
