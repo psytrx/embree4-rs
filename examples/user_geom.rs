@@ -1,6 +1,6 @@
 #![feature(pointer_byte_offsets)]
 
-use std::{panic, slice};
+use std::f32::{consts::PI, INFINITY};
 
 use embree4_rs::{
     geometry::{UserGeometry, UserGeometryImpl},
@@ -8,6 +8,7 @@ use embree4_rs::{
 };
 
 use anyhow::Result;
+use embree4_sys::RTCRay;
 use glam::{vec3, Vec3};
 
 fn main() -> Result<()> {
@@ -20,11 +21,56 @@ fn main() -> Result<()> {
         center: vec3(0.0, 0.0, 5.0),
         radius: 1.0,
     };
-    let geom = UserGeometry::try_new(&device, &sphere, intersect_fn, occluded_fn)?;
+    let geom = UserGeometry::try_new(&device, &sphere)?;
 
     scene.attach_geometry(&geom)?;
 
-    let _scene = scene.commit()?;
+    let scene = scene.commit()?;
+
+    let origin = Vec3::ZERO;
+    let width = 32;
+    let height = 18;
+
+    let rays = width * height;
+    let mut hits = 0;
+
+    for x in 0..width {
+        for y in 0..height {
+            let u = (x as f32 + 0.5) / width as f32;
+            let v = (y as f32 + 0.5) / height as f32;
+
+            let target = vec3(u * 2.0 - 1.0, v * 2.0 - 1.0, 5.0);
+            let direction = target - origin;
+
+            let ray = RTCRay {
+                org_x: origin.x,
+                org_y: origin.y,
+                org_z: origin.z,
+                tnear: 0.0,
+                dir_x: direction.x,
+                dir_y: direction.y,
+                dir_z: direction.z,
+                time: 0.0,
+                tfar: INFINITY,
+                mask: (-1_i32) as u32,
+                id: 0,
+                flags: 0,
+            };
+
+            let hit = scene.intersect_1(ray)?;
+
+            if hit.is_some() {
+                hits += 1
+            }
+        }
+    }
+
+    let hit_fraction = hits as f32 / rays as f32;
+    let approx_pi = hit_fraction * 4.0;
+    println!("Hit fraction: {}", hit_fraction);
+    println!("Approximated pi: {}", approx_pi);
+    let err = (approx_pi - PI).abs();
+    println!("Error: {}", err);
 
     Ok(())
 }
@@ -47,101 +93,51 @@ impl UserGeometryImpl for Sphere {
             align1: Default::default(),
         }
     }
-}
 
-unsafe extern "C" fn intersect_fn(args: *const embree4_sys::RTCIntersectFunctionNArguments) {
-    if true {
-        panic!("oops");
-    }
+    fn intersect(
+        &self,
+        geom_id: u32,
+        prim_id: u32,
+        ctx: &embree4_sys::RTCRayQueryContext,
+        ray_hit: &mut embree4_sys::RTCRayHit,
+    ) {
+        let o = vec3(ray_hit.ray.org_x, ray_hit.ray.org_y, ray_hit.ray.org_z);
+        let d = vec3(ray_hit.ray.dir_x, ray_hit.ray.dir_y, ray_hit.ray.dir_z);
+        let oc = o - self.center;
 
-    let args = *args;
-    let sphere = &*(args.geometryUserPtr as *const Sphere);
+        let a = d.dot(d);
+        let b = 2.0 * oc.dot(d);
+        let c = oc.dot(oc) - self.radius * self.radius;
 
-    let rayhit_n = args.rayhit;
-    #[allow(clippy::erasing_op)]
-    let ray_n = &(rayhit_n.byte_add(0 * args.N as usize) as *const _ as *mut embree4_sys::RTCRayN);
-    let hit_n =
-        &(rayhit_n.byte_add(4 * 12 * args.N as usize) as *const _ as *mut embree4_sys::RTCHitN);
-
-    let valid_ptr = args.valid as *const u32;
-    let valid = slice::from_raw_parts(valid_ptr, args.N as usize);
-
-    let context = &*(args.context as *const embree4_sys::RTCRayQueryContext);
-
-    for i in 0..args.N {
-        if valid[i as usize] == 0 {
-            continue;
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant < 0.0 {
+            return;
         }
 
-        #[allow(clippy::erasing_op)]
-        let ox = ray_n.byte_add((4 * (0 * args.N + i)) as usize) as *const f32;
-        let oy = ray_n.byte_add((4 * (args.N + i)) as usize) as *const f32;
-        let oz = ray_n.byte_add((4 * (2 * args.N + i)) as usize) as *const f32;
-        let _tnear = ray_n.byte_add((4 * (3 * args.N + i)) as usize) as *const f32;
-
-        let dx = ray_n.byte_add((4 * (4 * args.N + i)) as usize) as *const f32;
-        let dy = ray_n.byte_add((4 * (5 * args.N + i)) as usize) as *const f32;
-        let dz = ray_n.byte_add((4 * (6 * args.N + i)) as usize) as *const f32;
-        let _time = *(ray_n.add((4 * (7 * args.N + i)) as usize) as *const f32);
-
-        let tfar = ray_n.byte_add((4 * (8 * args.N + i)) as usize) as *mut f32;
-        let _mask = ray_n.byte_add((4 * (9 * args.N + i)) as usize) as *mut u32;
-        let _id = ray_n.byte_add((4 * (10 * args.N + i)) as usize) as *mut u32;
-        let _flags = ray_n.byte_add((4 * (11 * args.N + i)) as usize) as *mut u32;
-
-        #[allow(clippy::erasing_op)]
-        let _ng_x = hit_n.byte_add((4 * (0 * args.N + i)) as usize) as *mut f32;
-        let _ng_y = hit_n.byte_add((4 * (args.N + i)) as usize) as *mut f32;
-        let _ng_z = hit_n.byte_add((4 * (2 * args.N + i)) as usize) as *mut f32;
-
-        let _u = hit_n.byte_add((4 * (3 * args.N + i)) as usize) as *mut f32;
-        let _v = hit_n.byte_add((4 * (4 * args.N + i)) as usize) as *mut f32;
-
-        let prim_id = hit_n.byte_add((4 * (5 * args.N + i)) as usize) as *mut u32;
-        let geom_id = hit_n.byte_add((4 * (6 * args.N + i)) as usize) as *mut u32;
-        let inst_id = hit_n.byte_add((4 * (7 * args.N + i)) as usize) as *mut u32;
-
-        let origin = (*ox, *oy, *oz);
-        let direction = (*dx, *dy, *dz);
-        if let Some(t) = ray_sphere_intersect(sphere.center, sphere.radius, origin, direction) {
-            *tfar = t;
-            *inst_id = context.instID[0];
-            *geom_id = args.geomID;
-            *prim_id = args.primID;
-        }
-    }
-}
-
-unsafe extern "C" fn occluded_fn(_args: *const embree4_sys::RTCOccludedFunctionNArguments) {
-    todo!("not implemented for brevity")
-}
-
-fn ray_sphere_intersect(
-    center: Vec3,
-    r: f32,
-    origin: (f32, f32, f32),
-    direction: (f32, f32, f32),
-) -> Option<f32> {
-    let ox_cx = origin.0 - center.x;
-    let oy_cy = origin.1 - center.y;
-    let oz_cz = origin.2 - center.z;
-
-    let a = direction.0 * direction.0 + direction.1 * direction.1 + direction.2 * direction.2;
-    let b = 2.0 * (ox_cx * direction.0 + oy_cy * direction.1 + oz_cz * direction.2);
-    let c = ox_cx * ox_cx + oy_cy * oy_cy + oz_cz * oz_cz - r * r;
-
-    let discriminant = b * b - 4.0 * a * c;
-
-    if discriminant < 0.0 {
-        None
-    } else {
         let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
         let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
-        if t1 >= 0.0 || t2 >= 0.0 {
-            Some(t1.min(t2))
-        } else {
-            None // The sphere is behind the ray origin
-        }
+        let t = t1.min(t2);
+        ray_hit.ray.tfar = t;
+
+        let n = (o + t * d - self.center).normalize();
+        ray_hit.hit.Ng_x = n.x;
+        ray_hit.hit.Ng_y = n.y;
+        ray_hit.hit.Ng_z = n.z;
+
+        // calculate uv coordinates
+        let p = o + t * d;
+        let phi = p.z.atan2(p.x);
+        let theta = p.y.asin();
+
+        let u = 1.0 - (phi + PI) / (2.0 * PI);
+        ray_hit.hit.u = u;
+
+        let v = (theta + PI / 2.0) / PI;
+        ray_hit.hit.v = v;
+
+        ray_hit.hit.instID = ctx.instID;
+        ray_hit.hit.geomID = geom_id;
+        ray_hit.hit.primID = prim_id;
     }
 }
