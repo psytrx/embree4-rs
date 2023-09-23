@@ -139,16 +139,7 @@ impl<'a> CommittedScene<'a> {
     pub fn intersect_1(&self, ray: embree4_sys::RTCRay) -> Result<Option<embree4_sys::RTCRayHit>> {
         let mut ray_hit = embree4_sys::RTCRayHit {
             ray,
-            hit: embree4_sys::RTCHit {
-                Ng_x: f32::default(),
-                Ng_y: f32::default(),
-                Ng_z: f32::default(),
-                u: f32::default(),
-                v: f32::default(),
-                primID: u32::default(),
-                geomID: embree4_sys::RTC_INVALID_GEOMETRY_ID,
-                instID: [embree4_sys::RTC_INVALID_GEOMETRY_ID],
-            },
+            hit: Default::default(),
         };
 
         unsafe {
