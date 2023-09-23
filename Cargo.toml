@@ -1,0 +1,16 @@
+[package]
+name = "embree4-rs"
+version = "0.0.1"
+edition = "2021"
+description = "High-level wrapper for Intel's Embree 4 high-performance ray tracing library."
+keywords = ["intel", "embree", "ray", "tracing", "bvh"]
+categories = ["api-bindings", "graphics", "rendering", "multimedia"]
+repository = "https://github.com/psytrx/embree4-rs/"
+documentation = "https://docs.rs/embree4-rs/"
+license = "MIT"
+license-file = "LICENSE"
+
+exclude = [".gitignore"]
+
+[dependencies]
+embree4-sys = "0.0.1"
