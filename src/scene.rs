@@ -135,6 +135,8 @@ pub struct CommittedScene<'a> {
     scene: &'a Scene<'a>,
 }
 
+unsafe impl<'a> Sync for CommittedScene<'a> {}
+
 impl<'a> CommittedScene<'a> {
     pub fn intersect_1(&self, ray: embree4_sys::RTCRay) -> Result<Option<embree4_sys::RTCRayHit>> {
         let mut ray_hit = embree4_sys::RTCRayHit {
