@@ -12,8 +12,10 @@ license-file = "LICENSE"
 exclude = [".gitignore"]
 
 [dev-dependencies]
-glam = "0.24.2"
+glam = { version = "0.24.2", features = ["rand"] }
+rand = "0.8.5"
 
 [dependencies]
 anyhow = "1.0.75"
 embree4-sys = "0.0.7"
+rayon = "1.8.0"
